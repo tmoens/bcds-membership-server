@@ -1,0 +1,21 @@
+{
+  "appenders": {
+    "out": {
+      "type": "stdout"
+    },
+    "bcds": {
+      "type": "file",
+      "filename": "log/bcds.log",
+      "maxLogSize": 20000000
+    }
+  },
+  "categories": {
+    "default": {
+      "appenders": [
+        "out",
+        "bcds"
+      ],
+      "level": "info"
+    }
+  }
+}
