@@ -26,7 +26,7 @@ export class MembershipsService {
     return `This action removes a #${id} membership`;
   }
 
-  async isPlayerActive(
+  async getMembershipState(
     player: Player,
     asOfDate: string,
   ): Promise<MembershipState> {

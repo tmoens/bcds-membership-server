@@ -112,7 +112,7 @@ export class PlayersService {
   async findByNameOrAlias(name: string): Promise<Player[]> {
     return this.repo
       .createQueryBuilder('p')
-      .where('p.fullName = :name', { name: name })
+      .where(`p.fullName LIKE '%${name}%'`)
       .orWhere(`p.aliases LIKE '%${name}%'`)
       .getMany();
   }

@@ -39,16 +39,15 @@ export class PdgaApiService {
     // console.log(`Logging in to PDGA API: ${JSON.stringify(response.data)}`);
   }
 
-  async getTournamentData(tournamentId): Promise<PdgaTournamentData | null> {
+  async getTournamentData(
+    tournamentId: string,
+  ): Promise<PdgaTournamentData | null> {
     const response = await lastValueFrom(
-      this.httpService.get(
-        `${pdgaURL}/event?tournament_id=${String(tournamentId)}`,
-        {
-          headers: {
-            Cookie: `${this.sessionName}=${this.sessionId}`,
-          },
+      this.httpService.get(`${pdgaURL}/event?tournament_id=${tournamentId}`, {
+        headers: {
+          Cookie: `${this.sessionName}=${this.sessionId}`,
         },
-      ),
+      }),
     );
     // console.log(`Tournament Data: ${JSON.stringify(response.data, null, 2)}`);
     if (
@@ -62,19 +61,25 @@ export class PdgaApiService {
     }
   }
 
-  async getPlayerData(pdgaNumber): Promise<PdgaPlayerData> {
+  async getPlayerData(pdgaNumber: string): Promise<PdgaPlayerData | null> {
     const response = await lastValueFrom(
-      this.httpService.get(
-        `${pdgaURL}/players?pdga_number=${String(pdgaNumber)}`,
-        {
-          headers: {
-            Cookie: `${this.sessionName}=${this.sessionId}`,
-          },
+      this.httpService.get(`${pdgaURL}/players?pdga_number=${pdgaNumber}`, {
+        headers: {
+          Cookie: `${this.sessionName}=${this.sessionId}`,
         },
-      ),
+      }),
     );
-    // console.log(`Tournament Data: response.data`);
-    return response.data as PdgaPlayerData;
+    // console.log(`Player Data: ${JSON.stringify(response.data)}`);
+
+    if (
+      response.data &&
+      response.data.players &&
+      response.data.players.length > 0
+    ) {
+      return response.data.players[0] as PdgaPlayerData;
+    } else {
+      return null;
+    }
   }
 
   // retrieve all the players in a tournament.

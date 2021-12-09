@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PlayersService } from './players/players.service';
 import { PaymentService } from './payment/payment.service';
@@ -7,8 +7,6 @@ import { Membership } from './memberships/entities/membership.entity';
 import { MembershipsService } from './memberships/memberships.service';
 import { getLogger } from 'log4js';
 import { JobState, JobStats } from './helpers/jobstats';
-import { pdgaNumberFromString } from './helpers/miscellaneous';
-import { Player } from './players/entities/player.entity';
 import {
   BcdsTournamentMembershipReport,
   BdcsMemberMini,
@@ -18,7 +16,7 @@ import { PdgaTournamentData } from './dtos/pdga-tournament-data';
 import { ImportDto } from './membership-sheet/importDtos';
 import { MembershipSheetService } from './membership-sheet/membership-sheet.service';
 import { plainToClass } from 'class-transformer';
-import { MembershipState } from './dtos/membership-state';
+import { MemberAndPdgaPlayerData } from './dtos/MemberByPdgaNumber';
 
 const logger = getLogger('appService');
 
@@ -48,12 +46,22 @@ export class AppService {
       tournamentId,
     );
     // if there is no such tournament, we are done here.
-    if (report.tournamentData) {
+    if (!report.tournamentData) {
+      return null;
+    }
+    // console.log(JSON.stringify(report.tournamentData));
+
+    // we only check BC tournaments.
+    // The GUI already prevents non-BC tournaments - but belt and suspenders
+    // This code should never get hit.
+    if (report.tournamentData.state_prov !== 'BC') {
       return null;
     }
 
     const tournamentPlayers: PdgaPlayerMini[] =
       await this.pdgaApiService.getTournamentPlayers(tournamentId);
+
+    // console.log(JSON.stringify(tournamentPlayers));
 
     for (const tp of tournamentPlayers) {
       const member: BdcsMemberMini = new BdcsMemberMini();
@@ -66,7 +74,7 @@ export class AppService {
       );
 
       // If we found the player, check if the player has a membership
-      member.state = await this.membershipService.isPlayerActive(
+      member.state = await this.membershipService.getMembershipState(
         player,
         report.tournamentData.start_date,
       );
@@ -75,97 +83,39 @@ export class AppService {
     return report;
   }
 
-  // Fetch the membership BCDS history for a player.
-  async getMemberships(
-    firstName: string,
-    lastName: string,
-    pdgaNumberAsString: string,
-  ): Promise<Membership[]> {
-    const player = await this.findPlayer(
-      firstName,
-      lastName,
-      pdgaNumberAsString,
-    );
-
-    if (player) {
-      return await this.membershipService.getMemberships(player.id);
-    } else {
-      return [];
-    }
-  }
-
-  async checkMembership(
-    firstName: string,
-    lastName: string,
-    pdgaNumberAsString: string,
-    tournamentDate: string,
-  ): Promise<MembershipState> {
-    const player = await this.findPlayer(
-      firstName,
-      lastName,
-      pdgaNumberAsString,
-    );
-
-    if (!tournamentDate) {
-      tournamentDate = new Date().toISOString().substring(0, 10);
-    }
-
-    return await this.membershipService.isPlayerActive(player, tournamentDate);
-  }
-
-  // Find a player using pdga number and names only.
-  async findPlayer(
-    firstName: string,
-    lastName: string,
+  // Given a PDGA number, see if the player is a current member.
+  async getMembershipByPdgaNumber(
     pdgaNumber: string,
-  ): Promise<Player> {
-    let player: Player = null;
-
-    // Best option is to use the PDGA Number
-    if (pdgaNumber) {
-      player = await this.playerService.findByPdgaNumber(pdgaNumber);
-      if (player) {
-        // We found a player with the right PDGA number.
-        // Now we do a minimal name check, i.e if we were given a last name
-        // it should occur somewhere in the player's full name.
-        if (lastName && player.fullName.indexOf(lastName.toLowerCase()) < 1) {
-          // if the name check fails
-          logger.warn(
-            `FIX? ==> Attempted match of "${firstName} ${lastName}" ` +
-              `with PDGA Membership number ${pdgaNumber} (${player.fullName})`,
-          );
-          this.logAndThrowException(
-            `The BCDS membership database knows of pdga number ${pdgaNumber} but ${lastName} ` +
-              `is not in the name we have for the player.`,
-          );
-        }
-      }
+  ): Promise<MemberAndPdgaPlayerData | null> {
+    const memberAndPdgaPlayerData = new MemberAndPdgaPlayerData();
+    // Let's ask the PDGA if this number is "known" and if so, get data for them.
+    memberAndPdgaPlayerData.pdgaPlayer =
+      await this.pdgaApiService.getPlayerData(pdgaNumber);
+    const player = await this.playerService.findByPdgaNumber(pdgaNumber);
+    if (player) {
+      memberAndPdgaPlayerData.membership = new BdcsMemberMini();
+      memberAndPdgaPlayerData.membership.name = player.fullName;
+      memberAndPdgaPlayerData.membership.state =
+        await this.membershipService.getMembershipState(
+          player,
+          new Date().toISOString().substring(0, 10),
+        );
     }
+    return memberAndPdgaPlayerData;
+  }
 
-    // If we have not found the player yet, let's try looking them up by name
-    if (!player) {
-      const players: Player[] = await this.playerService.findByName(
-        `${firstName} ${lastName}`,
-        pdgaNumber,
-      );
-      if (players.length > 1) {
-        let message = `FIX? ==> Multiple matches on "${firstName} ${lastName}". `;
-        if (pdgaNumber) {
-          message = message.concat(`Looking for PDGA Number ${pdgaNumber}`);
-        }
-        for (const player of players) {
-          message = message.concat(
-            `\nid: ${player.id}, dob: ${player.dob}, pdga: ${player.pdgaNumber}`,
-          );
-        }
-        this.logAndThrowException(message);
-      }
-      if (players.length === 1) {
-        // With trepidation we call this a match
-        player = players[0];
-      }
+  async getMembershipsByName(searchString: string): Promise<BdcsMemberMini[]> {
+    const members = [];
+    const today = new Date().toISOString().substring(0, 10);
+    const players = await this.playerService.findByNameOrAlias(searchString);
+    for (const p of players) {
+      const m = new BdcsMemberMini();
+      m.name = p.fullName;
+      m.pdgaNumber = p.pdgaNumber;
+      m.state = await this.membershipService.getMembershipState(p, today);
+      members.push(m);
     }
-    return player;
+    return members;
   }
 
   async importBcdsMembershipGoogleDoc(): Promise<string> {
@@ -217,10 +167,5 @@ export class AppService {
     }
     stats.setStatus(JobState.DONE);
     return JSON.stringify(stats, null, 2);
-  }
-
-  logAndThrowException(msg: string) {
-    logger.error(msg);
-    throw new BadRequestException(msg);
   }
 }

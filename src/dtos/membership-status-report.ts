@@ -7,9 +7,9 @@ export class BcdsTournamentMembershipReport {
 }
 
 export class BdcsMemberMini {
-  name: string;
+  name?: string;
   pdgaNumber?: string;
-  state: MembershipState = MembershipState.PLAYER_NOT_KNOWN;
+  state?: MembershipState = MembershipState.PLAYER_NOT_KNOWN;
   note?: string;
 }
 
