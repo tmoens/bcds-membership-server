@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PdgaTournamentData } from './dtos/pdga-tournament-data';
-import { BcdsTournamentMembershipReport, BdcsMemberMini } from './dtos/membership-status-report';
-import { MembershipState } from './dtos/membership-state';
+import {
+  BcdsTournamentMembershipReport,
+  BdcsMemberMini,
+} from './dtos/membership-status-report';
 import { MemberAndPdgaPlayerData } from './dtos/MemberByPdgaNumber';
 
 @UseInterceptors(ClassSerializerInterceptor)
@@ -17,7 +19,9 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get('get-membership-by-pdga-number')
-  async getMembershipByPdgaNumber(@Query() query): Promise<MemberAndPdgaPlayerData | null> {
+  async getMembershipByPdgaNumber(
+    @Query() query,
+  ): Promise<MemberAndPdgaPlayerData | null> {
     await this.appService.importBcdsMembershipGoogleDoc();
     return await this.appService.getMembershipByPdgaNumber(query.pdgaNumber);
   }

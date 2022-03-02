@@ -117,13 +117,32 @@ export class MembershipSheetService {
       if (row[sheetColumn.dob]) {
         player.dob = new Date(row[sheetColumn.dob]);
         if (Number.isNaN(player.dob.valueOf())) {
+          // sometimes the Date fails to translate the value in the dob column.
           logger.error(
             `Bad DOB for ${player.fullName}: ${row[sheetColumn.dob]}`,
           );
           stats.bump('invalid DOB');
           player.dob = null;
         } else {
-          player.dob = fudgeDateToUtc(player.dob);
+          // Sometimes the dob data for the player is particularly badly formatted. E.g. 9231982
+          // When this happens the conversion into a date becomes 9231982-01-01 00:00:00Z
+          // When you try to save a date like that in the database, problems ensue.
+          // So watch out for that specific case and ignore such dates.
+          const yearSanityCheck = player.dob.getFullYear();
+          if (
+            yearSanityCheck < 1920 ||
+            yearSanityCheck > new Date().getFullYear()
+          ) {
+            logger.error(
+              `FIX ==> DOB ${player.dob.toISOString()} for player'${
+                player.fullName
+              }' translates to a very strange year.`,
+            );
+            stats.bump('invalid DOB');
+            player.dob = null;
+          } else {
+            player.dob = fudgeDateToUtc(player.dob);
+          }
         }
       }
       if (row[sheetColumn.address]) {

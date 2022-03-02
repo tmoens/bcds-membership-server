@@ -134,7 +134,6 @@ export class AppService {
     let rowNum = 0;
     for (const dto of importData) {
       rowNum++;
-
       // We can safely ignore any payment that has a payment confirmation code that we
       // have already processed.
       if (

@@ -5,9 +5,5 @@
 // But I like that new Date('some date string') can parse just about any date string.
 // So welcome to this kludge
 export function fudgeDateToUtc(d: Date): Date {
-  return new Date(
-    d.getUTCFullYear(),
-    d.getUTCMonth(),
-    d.getUTCDate(),
-    )
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }

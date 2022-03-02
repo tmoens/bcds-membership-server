@@ -20,9 +20,9 @@ import { MembershipSheetModule } from './membership-sheet/membership-sheet.modul
     ConfigModule.forRoot({
       isGlobal: true,
 
-      envFilePath: (process.env.NODE_ENV) ?
-        `environments/${process.env.NODE_ENV}.env` :
-        `environments/development.env`,
+      envFilePath: process.env.NODE_ENV
+        ? `environments/${process.env.NODE_ENV}.env`
+        : `environments/development.env`,
       validationSchema: Joi.object({
         PORT: Joi.number().default(3000),
 

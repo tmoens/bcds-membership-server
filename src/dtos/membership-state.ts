@@ -1,5 +1,5 @@
 export enum MembershipState {
   ACTIVE_MEMBER = 'current',
-  PREVIOUS_MEMBER = 'lapsed',
+  PREVIOUS_MEMBER = 'inactive',
   PLAYER_NOT_KNOWN = 'unknown player',
 }
