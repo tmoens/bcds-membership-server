@@ -170,7 +170,6 @@ export class PlayersService {
             player.dob = dto.dob;
           }
         }
-
         if (dto.email) player.email = dto.email;
         if (dto.address) player.address = dto.address;
         if (dto.city) player.city = dto.city;
