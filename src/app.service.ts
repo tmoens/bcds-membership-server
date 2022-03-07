@@ -98,7 +98,7 @@ export class AppService {
       memberAndPdgaPlayerData.membership.state =
         await this.membershipService.getMembershipState(
           player,
-          new Date().toISOString().substring(0, 10),
+          new Date().toISOString(),
         );
     }
     return memberAndPdgaPlayerData;
@@ -106,7 +106,7 @@ export class AppService {
 
   async getMembershipsByName(searchString: string): Promise<BdcsMemberMini[]> {
     const members = [];
-    const today = new Date().toISOString().substring(0, 10);
+    const today = new Date().toISOString();
     const players = await this.playerService.findByNameOrAlias(searchString);
     for (const p of players) {
       const m = new BdcsMemberMini();
