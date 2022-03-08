@@ -1,4 +1,10 @@
-import { Column, Entity, Index, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Membership } from '../../memberships/entities/membership.entity';
 
 @Entity()
@@ -48,7 +54,6 @@ export class Player {
   // keep track of a players aliases
   // returns true if an alias was added.
   aka(name): boolean {
-
     // If we already have the right name, nothing to do.
     if (this.fullName === name) {
       return false;
@@ -64,10 +69,15 @@ export class Player {
     if (this.aliases.indexOf(name) >= 0) {
       return false;
     } else {
-
       // otherwise add the name to the list of aliases
       this.aliases = this.aliases.concat(`, ${name}`);
       return true;
     }
+  }
+
+  isKnownAs(nameOrAlias): boolean {
+    if (this.fullName === nameOrAlias) return true;
+    if (this.aliases && this.aliases.indexOf(nameOrAlias) >= 0) return true;
+    return false;
   }
 }

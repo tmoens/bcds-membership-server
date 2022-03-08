@@ -60,7 +60,7 @@ export class PlayersService {
       }
     } else {
       // We don't know the player by their pdga number.
-      // Let's see if we there is exactly one player with this name who has no pdga number
+      // Let's see if there is exactly one player with this name who has no pdga number
       player = await this.findExactlyOneByNameNoPdgaNumber(name);
 
       if (player) {
@@ -144,7 +144,7 @@ export class PlayersService {
         where: { pdgaNumber: dto.pdgaNumber },
       });
       if (player) {
-        if (player.fullName !== dto.fullName) {
+        if (player.isKnownAs(dto.fullName)) {
           // If the PDGA numbers match, but the names don't, it is a serious conundrum.
           // Can we simply overwrite the name?  I don;t think so.  Just issue a warning and give up.
           logger.error(
