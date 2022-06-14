@@ -98,7 +98,7 @@ export class PlayersService {
       .andWhere(
         new Brackets((qb) => {
           qb.where('p.fullName = :name', { name: name })
-            .orWhere(`p.aliases LIKE '%${name}%'`)
+            .orWhere(`p.aliases LIKE "%${name}%"`)
         }),
       )
       .getMany();
