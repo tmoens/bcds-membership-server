@@ -76,8 +76,12 @@ export class Player {
   }
 
   isKnownAs(nameOrAlias): boolean {
-    if (this.fullName === nameOrAlias) return true;
-    if (this.aliases && this.aliases.indexOf(nameOrAlias) >= 0) return true;
+    if (this.fullName.toLowerCase() === nameOrAlias) {
+      return true;
+    }
+    if (this.aliases && this.aliases.toLowerCase().indexOf(nameOrAlias) >= 0) {
+      return true;
+    }
     return false;
   }
 }

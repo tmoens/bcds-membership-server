@@ -144,7 +144,7 @@ export class PlayersService {
         where: { pdgaNumber: dto.pdgaNumber },
       });
       if (player) {
-        if (player.isKnownAs(dto.fullName)) {
+        if (!player.isKnownAs(dto.fullName)) {
           // If the PDGA numbers match, but the names don't, it is a serious conundrum.
           // Can we simply overwrite the name?  I don;t think so.  Just issue a warning and give up.
           logger.error(
