@@ -17,16 +17,19 @@ export class PdgaApiService {
   sessionName = '';
   sessionId = '';
 
+  sessionStart = 0;
+
   constructor(
     private httpService: HttpService,
     private configService: ConfigService,
-  ) {
-    this.login();
-  }
+  ) {}
 
   async login() {
-    logger.info(`Logging into PDGA API.`);
-    const password = this.configService.get('PDGA_API_PASSWORD');
+    const now = Date.now() / 1000;
+    // Just redo the login every 10 days
+    if (now - this.sessionStart < 10 * 14 * 60 * 60) {
+      return;
+    }
     const response: any = await lastValueFrom(
       this.httpService.post(`${pdgaURL}/user/login`, {
         username: this.configService.get('PDGA_API_USER'),
@@ -36,12 +39,14 @@ export class PdgaApiService {
     this.token = response.data.token;
     this.sessionId = response.data.sessid;
     this.sessionName = response.data.session_name;
-    // console.log(`Logging in to PDGA API: ${JSON.stringify(response.data)}`);
+    this.sessionStart = now;
+    logger.info(`Logging in to PDGA API: ${JSON.stringify(response.data)}`);
   }
 
   async getTournamentData(
     tournamentId: string,
   ): Promise<PdgaTournamentData | null> {
+    await this.login().then();
     const response = await lastValueFrom(
       this.httpService.get(`${pdgaURL}/event?tournament_id=${tournamentId}`, {
         headers: {
@@ -62,6 +67,7 @@ export class PdgaApiService {
   }
 
   async getPlayerData(pdgaNumber: string): Promise<PdgaPlayerData | null> {
+    await this.login().then();
     const response = await lastValueFrom(
       this.httpService.get(`${pdgaURL}/players?pdga_number=${pdgaNumber}`, {
         headers: {
