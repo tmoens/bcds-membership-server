@@ -17,6 +17,7 @@ import { ImportDto } from './membership-sheet/importDtos';
 import { MembershipSheetService } from './membership-sheet/membership-sheet.service';
 import { plainToClass } from 'class-transformer';
 import { MemberAndPdgaPlayerData } from './dtos/MemberByPdgaNumber';
+import { Player } from './players/entities/player.entity';
 
 const logger = getLogger('appService');
 
@@ -45,19 +46,22 @@ export class AppService {
     report.tournamentData = await this.pdgaApiService.getTournamentData(
       tournamentId,
     );
+
     // if there is no such tournament, we are done here.
     if (!report.tournamentData) {
       return null;
     }
     // console.log(JSON.stringify(report.tournamentData));
 
-    // we only check BC tournaments.
+    // We only check BC tournaments.
     // The GUI already prevents non-BC tournaments - but belt and suspenders
-    // This code should never get hit.
     if (report.tournamentData.state_prov !== 'BC') {
+      // This code should never get hit.
       return null;
     }
 
+    // For every player in the tournament we look to see if we know them
+    // and if we don't we still make a record of the player in our database.
     const tournamentPlayers: PdgaPlayerMini[] =
       await this.pdgaApiService.getTournamentPlayers(tournamentId);
 
@@ -68,10 +72,7 @@ export class AppService {
       member.name = tp.name;
       member.pdgaNumber = tp.pdgaNumber;
 
-      const player = await this.playerService.findPlayer(
-        tp.name,
-        tp.pdgaNumber,
-      );
+      const player: Player = await this.playerService.processPdgaPlayer(tp);
 
       // If we found the player, check if the player has a membership
       member.state = await this.membershipService.getMembershipState(
@@ -118,6 +119,12 @@ export class AppService {
     return members;
   }
 
+  /*
+   * Load up the BCDS Competitive member spreadsheet.
+   * When doing this we need to watch out if the data in the membership
+   * record we receive is for a player we already know about.
+   * It isn't always that easy to tell!
+   */
   async importBcdsMembershipGoogleDoc(): Promise<string> {
     const stats = new JobStats('Reload the BCDS membership spreadsheet.');
     stats.setStatus(JobState.IN_PROGRESS);
@@ -136,6 +143,10 @@ export class AppService {
       rowNum++;
       // We can safely ignore any payment that has a payment confirmation code that we
       // have already processed.
+      // But. If someone manually changes (i.e. fixes) a record in the payments
+      // sheet, that change will not be caught by this software. Which means,
+      // if the fix is important, it has to be done manually in the database.
+      // Which is to say, this software is ad-hoc at best.
       if (
         await this.paymentService.confirmationCodeExists(
           dto.payment.confirmationCode,
@@ -145,6 +156,8 @@ export class AppService {
         continue;
       }
 
+      // See if we can find a player that matches the data on this record.
+      // Or, failing that, create a new player.
       const player = await this.playerService.lookupOrCreate(dto.player);
       if (!player) {
         logger.error(

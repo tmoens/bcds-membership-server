@@ -53,7 +53,7 @@ export class Player {
 
   // keep track of a players aliases
   // returns true if an alias was added.
-  aka(name): boolean {
+  trackAliases(name): boolean {
     // If we already have the right name, nothing to do.
     if (this.fullName === name) {
       return false;
